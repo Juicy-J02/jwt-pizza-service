@@ -4,11 +4,13 @@ const { DB } = require('../database/database');
 
 const testUser = { name: 'test diner', email: 'reg@test.com', password: 'a' };
 let testUserAuthToken;
+let userId;
 
 beforeAll(async () => {
     testUser.email = Math.random().toString(36).substring(2, 12) + '@test.com';
     const regRes = await request(app).post('/api/auth').send(testUser);
     testUserAuthToken = regRes.body.token;
+    userId = regRes.body.user.id;
 });
 
 test('get menu', async () => {

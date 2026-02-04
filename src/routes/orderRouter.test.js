@@ -2,7 +2,6 @@ const request = require('supertest');
 const app = require('../service');
 const { DB } = require('../database/database');
 const { Role } = require('../model/model');
-const { listenerCount } = require('supertest/lib/test');
 
 const testUser = { name: 'test diner', email: 'reg@test.com', password: 'a' };
 let testUserAuthToken;

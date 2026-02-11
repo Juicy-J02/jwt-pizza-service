@@ -1,6 +1,13 @@
-const { DB, Role } = require('./database');
-
+const mysql = require('mysql2/promise');
 jest.mock('mysql2/promise');
+
+mysql.createConnection = jest.fn().mockResolvedValue({
+    query: jest.fn().mockResolvedValue([[]]),
+    execute: jest.fn().mockResolvedValue([[]]),
+    end: jest.fn().mockResolvedValue(null),
+});
+
+const { DB, Role } = require('./database');
 
 let mockConnection;
 

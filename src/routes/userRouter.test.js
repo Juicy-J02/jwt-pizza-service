@@ -1,7 +1,7 @@
 const request = require('supertest');
 const express = require('express');
-const userRouter = require('./userRouter'); // Adjust path as needed
-const { DB, Role } = require('../database/database');
+const userRouter = require('./userRouter');
+const { DB } = require('../database/database');
 const { setAuth } = require('./authRouter');
 
 jest.mock('../database/database');

@@ -1,7 +1,8 @@
 const { DB, Role } = require('./database');
-const mysql = require('mysql2/promise');
 
 jest.mock('mysql2/promise');
+
+let mockConnection;
 
 beforeEach(() => {
     jest.clearAllMocks();

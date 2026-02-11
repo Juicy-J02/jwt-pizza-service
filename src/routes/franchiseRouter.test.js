@@ -1,7 +1,7 @@
 const request = require('supertest');
 const express = require('express');
 const franchiseRouter = require('./franchiseRouter');
-const { DB, Role } = require('../database/database');
+const { DB } = require('../database/database');
 
 jest.mock('../database/database');
 jest.mock('./authRouter', () => ({

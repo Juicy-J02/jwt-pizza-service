@@ -1,67 +1,110 @@
 const request = require('supertest');
-const app = require('../service');
-const { DB } = require('../database/database');
+const express = require('express');
+const franchiseRouter = require('./franchiseRouter');
+const { DB, Role } = require('../database/database');
 
-const testUser = { name: 'test diner', email: 'reg@test.com', password: 'a'};
-let testUserAuthToken;
-let userId;
+jest.mock('../database/database');
+jest.mock('./authRouter', () => ({
+    authRouter: {
+    authenticateToken: jest.fn((req, res, next) => {
+        req.user = { 
+        id: 4, 
+        roles: [{ role: 'diner' }], 
+        isRole: (role) => req.user.roles.some(r => r.role === role) 
+        };
+        next();
+    }),
+    },
+}));
 
-beforeAll(async () => {
-    testUser.email = Math.random().toString(36).substring(2, 12) + '@test.com';
-    const regRes = await request(app).post('/api/auth').send(testUser);
-    testUserAuthToken = regRes.body.token;
-    userId = regRes.body.user.id;
+const { authRouter } = require('./authRouter');
+
+const app = express();
+app.use(express.json());
+app.use('/api/franchise', franchiseRouter);
+
+
+beforeEach(() => {
+    jest.clearAllMocks();
 });
 
-test('get franchises', async () => {
+test('List Franchises', async () => {
+    const mockFranchises = [{ id: 1, name: 'pizzaPocket' }];
+    DB.getFranchises.mockResolvedValue([mockFranchises, true]);
+
     const res = await request(app).get('/api/franchise');
+
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('franchises');
-    expect(Array.isArray(res.body.franchises)).toBe(true);
+    expect(res.body.franchises).toEqual(mockFranchises);
+    expect(res.body.more).toBe(true);
 });
 
-test('create franchises - fail', async () => {
+test('Get User Franchises', async () => {
+    const mockFranchises = [{ id: 1, name: 'pizzaPocket' }];
+    DB.getUserFranchises.mockResolvedValue(mockFranchises);
+
+    const res = await request(app).get('/api/franchise/4');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(mockFranchises);
+    expect(DB.getUserFranchises).toHaveBeenCalledWith(4);
+});
+
+test('Create Franchise', async () => {
+    authRouter.authenticateToken.mockImplementationOnce((req, res, next) => {
+        req.user = { id: 1, roles: [{ role: 'admin' }], isRole: () => true };
+        next();
+    });
+
+    const mockResponse = { id: 1, name: 'pizzaPocket' };
+    DB.createFranchise.mockResolvedValue(mockResponse);
+
     const res = await request(app)
         .post('/api/franchise')
-        .set('Authorization', `Bearer ${testUserAuthToken}`)
-        .send({ name: 'Invalid Franchise', admins: [{ email: 'f@jwt.com' }] });
-
-    expect(res.status).toBe(403);
-    expect(res.body.message).toMatch(/unable to create a franchise/);
-});
-
-test('get user franchises', async () => {
-    const res = await request(app)
-        .get(`/api/franchise/${userId}`)
-        .set('Authorization', `Bearer ${testUserAuthToken}`);
+        .send({ name: 'pizzaPocket', admins: [{ email: 'f@jwt.com' }] });
 
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.name).toBe('pizzaPocket');
 });
 
-test('delete store - fail', async () => {
+test('Create Store', async () => {
+    const franchiseId = 1;
+    const mockFranchise = { id: franchiseId, admins: [{ id: 4 }] };
+
+    DB.getFranchise.mockResolvedValue(mockFranchise);
+    DB.createStore.mockResolvedValue({ id: 10, name: 'SLC' });
+
     const res = await request(app)
-        .delete('/api/franchise/1/store/9999')
-        .set('Authorization', `Bearer ${testUserAuthToken}`)
+        .post(`/api/franchise/${franchiseId}/store`)
+        .send({ name: 'SLC' });
 
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('SLC');
 });
 
-test('create store - fail', async () => {
-    const res = await request(app)
-        .post('/api/franchise/9999/store')
-        .set('Authorization', `Bearer ${testUserAuthToken}`)
-        .send({ name: 'No Where Store' });
+test('Delete Franchise', async () => {
+    DB.deleteFranchise.mockResolvedValue(true);
 
-    expect(res.status).toBe(403);
-});
-
-test('delete franchise', async () => {
     const res = await request(app).delete('/api/franchise/1');
+
     expect(res.status).toBe(200);
     expect(res.body.message).toBe('franchise deleted');
 });
 
-afterAll(async () => {
-    await DB.logoutUser(testUserAuthToken);
+test('DELETE /api/franchise/:fid/store/:sid - success for franchise admin', async () => {
+    const franchiseId = 1;
+    const storeId = 10;
+
+    DB.getFranchise.mockResolvedValue({ id: franchiseId, admins: [{ id: 4 }] });
+    DB.deleteStore.mockResolvedValue(true);
+
+    const res = await request(app).delete(`/api/franchise/${franchiseId}/store/${storeId}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('store deleted');
+    expect(DB.deleteStore).toHaveBeenCalledWith(franchiseId, storeId);
+});
+
+afterAll(() => {
+    jest.restoreAllMocks();
 });

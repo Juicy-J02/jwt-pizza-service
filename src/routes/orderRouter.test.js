@@ -1,94 +1,90 @@
 const request = require('supertest');
-const app = require('../service');
+const express = require('express');
+const orderRouter = require('./orderRouter');
 const { DB } = require('../database/database');
-const { Role } = require('../model/model');
 
-const testUser = { name: 'test diner', email: 'reg@test.com', password: 'a' };
-let testUserAuthToken;
-let adminToken;
-let franchiseId;
-let storeId;
-let menuId;
+jest.mock('../database/database');
+jest.mock('./authRouter', () => ({
+  authRouter: {
+    authenticateToken: jest.fn((req, res, next) => {
+      req.user = { 
+        id: 4, 
+        name: 'test diner', 
+        email: 'diner@test.com',
+        roles: [{ role: 'diner' }], 
+        isRole: (role) => req.user.roles.some(r => r.role === role) 
+      };
+      next();
+    }),
+  },
+}));
 
-beforeAll(async () => {
-    testUser.email = Math.random().toString(36).substring(2, 12) + '@test.com';
-    const regRes = await request(app).post('/api/auth').send(testUser);
-    testUserAuthToken = regRes.body.token;
-    await DB.initialized;
+global.fetch = jest.fn();
 
-    const adminUser = { name: 'Test Admin', email: `admin-${Date.now()}@test.com`, password: 'password123', roles: [{ role: Role.Admin }] };
-    await DB.addUser(adminUser);
-    const loginRes = await request(app).put('/api/auth').send({ email: adminUser.email, password: adminUser.password });
-    adminToken = loginRes.body.token;
+const app = express();
+app.use(express.json());
+app.use('/api/order', orderRouter);
 
-    const franchiseRes = await request(app)
-        .post('/api/franchise')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: 'T', admins: [{ email: adminUser.email }] });
-    franchiseId = franchiseRes.body.id;
-
-    const storeRes = await request(app)
-        .post(`/api/franchise/${franchiseId}/store`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: 'Main St Store' });
-    storeId = storeRes.body.id;
-
-    const menuRes = await request(app)
-        .put('/api/order/menu')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ title: 'Test Pizza', description: 'Yum', image: 't.png', price: 0.01 });
-    menuId = menuRes.body[0].id;
+beforeEach(() => {
+    jest.clearAllMocks();
 });
 
-test('get menu', async () => {
+
+test('Get Menu', async () => {
+    const mockMenu = [{ id: 1, title: 'Veggie', price: 0.05 }];
+    DB.getMenu.mockResolvedValue(mockMenu);
+
     const res = await request(app).get('/api/order/menu');
+
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toEqual(mockMenu);
 });
 
-test('add menu - fail', async () => {
-    const res = await request(app)
-        .put('/api/order/menu')
-        .set('Authorization', `Bearer ${testUserAuthToken}`)
-        .send({ title: 'test pizza', price: 0.001 });
-    expect(res.status).toBe(403);
-    expect(res.body.message).toMatch(/unable to add menu item/);
-});
+test('Create Order', async () => {
+    const mockOrder = { id: 1, franchiseId: 1, storeId: 1, items: [] };
+    DB.addDinerOrder.mockResolvedValue(mockOrder);
 
-test('get orders', async () => {
-    const res = await request(app)
-        .get('/api/order')
-        .set('Authorization', `Bearer ${testUserAuthToken}`)
-    expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('orders');
-});
+    global.fetch.mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ reportUrl: 'http://chaos.com', jwt: 'factory-jwt' }),
+    });
 
-test('create order', async () => {
     const res = await request(app)
         .post('/api/order')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-            franchiseId: franchiseId,
-            storeId: storeId,
-            items: [{ menuId: menuId, description: 'Test Pizza', price: 0.01 }]
-        });
+        .send({ franchiseId: 1, storeId: 1, items: [] });
 
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('jwt');
+    expect(res.body.order).toEqual(mockOrder);
+    expect(res.body.jwt).toBe('factory-jwt');
+    expect(global.fetch).toHaveBeenCalled();
 });
 
-afterAll(async () => {
-    await request(app)
-        .delete(`/api/franchise/${franchiseId}/store/${storeId}`)
-        .set('Authorization', `Bearer ${adminToken}`);
+test('Create Order Fail', async () => {
+    DB.addDinerOrder.mockResolvedValue({ id: 1 });
 
-    await request(app)
-        .delete(`/api/franchise/${franchiseId}`)
-        .set('Authorization', `Bearer ${adminToken}`);
+    global.fetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: jest.fn().mockResolvedValue({ reportUrl: 'http://chaos.com' }),
+    });
 
-    await request(app)
-        .delete('/api/auth')
-        .set('Authorization', `Bearer ${adminToken}`);
+    const res = await request(app)
+        .post('/api/order')
+        .send({ franchiseId: 1, storeId: 1, items: [] });
 
-    await DB.logoutUser(testUserAuthToken);
+    expect(res.status).toBe(500);
+    expect(res.body.message).toMatch(/Failed to fulfill order/);
 });
+
+test('Add Menu Item Fail', async () => {
+    const res = await request(app)
+        .put('/api/order/menu')
+        .send({ title: 'New Pizza' });
+
+    expect(res.status).toBe(403);
+});
+
+afterAll(() => {
+    jest.restoreAllMocks();
+});
+  

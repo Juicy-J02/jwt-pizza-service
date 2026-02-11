@@ -1,49 +1,59 @@
 const request = require('supertest');
-const app = require('../service');
-const { DB } = require('../database/database');
+const express = require('express');
+const userRouter = require('./userRouter'); // Adjust path as needed
+const { DB, Role } = require('../database/database');
+const { setAuth } = require('./authRouter');
 
-const testUser = { name: 'test diner', email: 'reg@test.com', password: 'a'};
-let testUserAuthToken;
-let userId;
+jest.mock('../database/database');
+jest.mock('./authRouter', () => ({
+    authRouter: {
+    authenticateToken: jest.fn((req, res, next) => {
+        req.user = { id: 1, roles: [{ role: 'diner' }], isRole: (role) => req.user.roles.some(r => r.role === role) };
+        next();
+    }),
+    },
+    setAuth: jest.fn(),
+}));
 
-beforeAll(async () => {
-    testUser.email = Math.random().toString(36).substring(2, 12) + '@test.com';
-    const regRes = await request(app).post('/api/auth').send(testUser);
-    testUserAuthToken = regRes.body.token;
-    userId = regRes.body.user.id;
+const app = express();
+app.use(express.json());
+app.use('/api/user', userRouter);
+
+beforeEach(() => {
+    jest.clearAllMocks();
 });
 
-test('get user', async () => {
-    const res = await request(app)
-        .get('/api/user/me')
-        .set('Authorization', `Bearer ${testUserAuthToken}`);
+test('Get User', async () => {
+    const res = await request(app).get('/api/user/me');
+
     expect(res.status).toBe(200);
-    expect(res.body.name).toBe(testUser.name)
+    expect(res.body.id).toBe(1);
 });
 
-test('update user', async () => {
+test('Update User', async () => {
+    const updatedUser = { id: 1, name: 'New Name', email: 'new@test.com' };
+    DB.updateUser.mockResolvedValue(updatedUser);
+    setAuth.mockResolvedValue('mock-new-token');
+
     const res = await request(app)
-        .put(`/api/user/${userId}`)
-        .set('Authorization', `Bearer ${testUserAuthToken}`)
-        .send({ name: 'New Name', email: testUser.email, password: testUser.password });
+        .put('/api/user/1')
+        .send({ name: 'New Name', email: 'new@test.com', password: 'password123' });
+
     expect(res.status).toBe(200);
     expect(res.body.user.name).toBe('New Name');
+    expect(res.body.token).toBe('mock-new-token');
 });
 
-test('delete user', async () => {
+test('Update User Fail', async () => {
     const res = await request(app)
-        .put(`/api/user/${userId}`)
-        .set('Authorization', `Bearer ${testUserAuthToken}`);
-    expect(res.status).toBe(500);
+    .put('/api/user/999')
+    .send({ name: 'Hacker' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toBe('unauthorized');
 });
 
-test('list users', async () => {
-    const res = await request(app)
-        .put(`/api/user/${userId}`)
-        .set('Authorization', `Bearer ${testUserAuthToken}`);
-    expect(res.status).toBe(500);
+afterAll(() => {
+    jest.restoreAllMocks();
 });
-
-afterAll(async () => {
-    await DB.logoutUser(testUserAuthToken);
-});
+  

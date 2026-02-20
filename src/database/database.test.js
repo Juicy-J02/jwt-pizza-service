@@ -22,7 +22,7 @@ beforeEach(() => {
         end: jest.fn(),
     };
     jest.spyOn(DB, '_getConnection').mockResolvedValue(mockConnection);
-    DB.initialized = Promise.resolve(); 
+    DB.initialized = Promise.resolve();
 });
 
 test('getMenu executes the correct SQL', async () => {
@@ -121,7 +121,7 @@ test('getTokenSignature extracts the third part of a JWT', () => {
 
 test('getOffset calculates correctly', () => {
     const offset = DB.getOffset(2, 10);
-    expect(offset).toEqual(10); 
+    expect(offset).toEqual(10);
 });
 
 test('addUser correctly inserts franchisee roles', async () => {
@@ -158,6 +158,11 @@ test('updateUser builds dynamic SQL based on provided fields', async () => {
     );
 });
 
+test('getAllUsers executes correct SQL and handles "more" correctly', async () => {
+    const [users] = await DB.getAllUsers(0, 10, '*');
+    expect(users.length).toEqual(0);
+});
+
 test('getFranchises returns stores for diners', async () => {
     const mockAuthUser = { isRole: () => false };
     mockConnection.execute
@@ -185,17 +190,17 @@ test('getFranchise retrieves admins and calculates revenue', async () => {
 
 test('getFranchise aggregates admin data and store revenue', async () => {
     const mockFranchise = { id: 1, name: 'Pizza Planet' };
-    
+
     mockConnection.execute
-      .mockResolvedValueOnce([
-        [{ id: 10, name: 'Admin Alice', email: 'alice@test.com' }]
-      ])
-      .mockResolvedValueOnce([
-        [
-          { id: 101, name: 'Downtown Store', totalRevenue: 150.50 },
-          { id: 102, name: 'Uptown Store', totalRevenue: 0 }
-        ]
-      ]);
+        .mockResolvedValueOnce([
+            [{ id: 10, name: 'Admin Alice', email: 'alice@test.com' }]
+        ])
+        .mockResolvedValueOnce([
+            [
+                { id: 101, name: 'Downtown Store', totalRevenue: 150.50 },
+                { id: 102, name: 'Uptown Store', totalRevenue: 0 }
+            ]
+        ]);
 
     const result = await DB.getFranchise(mockFranchise);
 

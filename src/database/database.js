@@ -82,13 +82,32 @@ class DB {
     nameFilter = nameFilter.replace(/\*/g, '%');
 
     try {
-      let users = await this.query(connection, `SELECT u.id, u.name, u.email, GROUP_CONCAT(r.role) AS roles 
+      let users = await this.query(connection, `SELECT u.id, u.name, u.email, u.password, r.role
                                                 FROM user u
                                                 LEFT JOIN userrole r
                                                 ON u.id = r.userId
-                                                WHERE name LIKE ? 
-                                                GROUP BY u.id, u.name, u.email
+                                                WHERE name LIKE ?
                                                 LIMIT ${limit + 1} OFFSET ${offset}`, [nameFilter]);
+      
+      const map = new Map();
+
+      for (const row of users) {
+        if (!map.has(row.id)) {
+          map.set(row.id, {
+            id: row.id,
+            name: row.name,
+            email: row.email,
+            password: row.password,
+            roles: []
+          });
+        }
+
+        if (row.role) {
+          map.get(row.id).roles.push({ role: row.role });
+        }
+      }
+
+      users = Array.from(map.values());
 
       const more = users.length > limit;
       if (more) {

@@ -29,7 +29,6 @@ beforeEach(() => {
     jest.clearAllMocks();
 });
 
-
 test('Get Menu', async () => {
     const mockMenu = [{ id: 1, title: 'Veggie', price: 0.05 }];
     DB.getMenu.mockResolvedValue(mockMenu);

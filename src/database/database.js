@@ -84,7 +84,7 @@ class DB {
     try {
       let users = await this.query(connection, `SELECT u.id, u.name, u.email, u.password, r.role
                                                 FROM user u
-                                                LEFT JOIN userrole r
+                                                LEFT JOIN userRole r
                                                 ON u.id = r.userId
                                                 WHERE name LIKE ?
                                                 LIMIT ${limit + 1} OFFSET ${offset}`, [nameFilter]);

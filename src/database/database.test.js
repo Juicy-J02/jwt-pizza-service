@@ -91,6 +91,7 @@ test('createFranchise validates admins and assigns roles', async () => {
         .mockResolvedValueOnce([]);
 
     const result = await DB.createFranchise(franchiseReq);
+    await DB.getUserFranchises(9)
 
     expect(result.id).toBe(100);
     expect(result.admins[0].id).toBe(9);

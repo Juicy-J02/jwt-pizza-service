@@ -145,6 +145,25 @@ test('addUser correctly inserts franchisee roles', async () => {
     );
 });
 
+test('deleteUser', async () => {
+    const mockUser = {
+        name: 'Test',
+        email: 't@test.com',
+        password: 'password',
+        roles: [{ role: Role.Franchisee, object: 'Pizza Hut' }]
+    };
+
+    mockConnection.execute
+        .mockResolvedValueOnce([{ insertId: 10 }])
+        .mockResolvedValueOnce([[{ id: 99 }]]);
+
+    await DB.addUser(mockUser);
+    
+    await DB.deleteUser(mockUser);
+
+    await expect(DB.getUser('t@test.com', 'password')).rejects.toThrow('unknown user');
+})
+
 test('updateUser builds dynamic SQL based on provided fields', async () => {
     mockConnection.execute.mockResolvedValue([{ affectedRows: 1 }]);
 

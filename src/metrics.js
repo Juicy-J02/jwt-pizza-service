@@ -36,12 +36,14 @@ function pizzaTracker(req, res, next) {
     const status = res.statusCode;
     pizzaRequests[status] = (pizzaRequests[status] || 0) + 1;
 
-    for (const item of res.locals.order.items) {
-      if (status == 200) {
-        pizzaPrice += item.price;
+    if (res.locals.order.items) {
+      for (const item of res.locals.order.items) {
+        if (status == 200) {
+          pizzaPrice += item.price;
+        }
       }
+      pizzaLatency = end - start;
     }
-    pizzaLatency = end - start;
   });
   next();
 }

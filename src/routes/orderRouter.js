@@ -3,6 +3,7 @@ const config = require('../config.js');
 const { Role, DB } = require('../database/database.js');
 const { authRouter } = require('./authRouter.js');
 const { asyncHandler, StatusCodeError } = require('../endpointHelper.js');
+const metrics = require('../metrics');
 
 const orderRouter = express.Router();
 
@@ -43,6 +44,7 @@ orderRouter.docs = [
 // getMenu
 orderRouter.get(
   '/menu',
+  metrics.requestTracker,
   asyncHandler(async (req, res) => {
     res.send(await DB.getMenu());
   })
@@ -51,6 +53,7 @@ orderRouter.get(
 // addMenuItem
 orderRouter.put(
   '/menu',
+  metrics.requestTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     if (!req.user.isRole(Role.Admin)) {
@@ -66,6 +69,7 @@ orderRouter.put(
 // getOrders
 orderRouter.get(
   '/',
+  metrics.requestTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     res.json(await DB.getOrders(req.user, req.query.page));
@@ -75,10 +79,13 @@ orderRouter.get(
 // createOrder
 orderRouter.post(
   '/',
+  metrics.requestTracker,
+  metrics.pizzaTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const orderReq = req.body;
     const order = await DB.addDinerOrder(req.user, orderReq);
+    res.locals.order = order
     const r = await fetch(`${config.factory.url}/api/order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', authorization: `Bearer ${config.factory.apiKey}` },

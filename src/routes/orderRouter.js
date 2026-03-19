@@ -63,7 +63,8 @@ orderRouter.put(
 
     const addMenuItemReq = req.body;
     await DB.addMenuItem(addMenuItemReq);
-    res.locals.auth = req.headers.authorization.split(' ')[1];
+    const authHeader = req.headers.authorization || '';
+    res.locals.auth = authHeader.split(' ')[1] || null;
     res.send(await DB.getMenu());
   })
 );
@@ -75,7 +76,8 @@ orderRouter.get(
   metrics.activeUserTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
-    res.locals.auth = req.headers.authorization.split(' ')[1];
+    const authHeader = req.headers.authorization || '';
+    res.locals.auth = authHeader.split(' ')[1] || null;
     res.json(await DB.getOrders(req.user, req.query.page));
   })
 );
@@ -91,7 +93,8 @@ orderRouter.post(
     const orderReq = req.body;
     const order = await DB.addDinerOrder(req.user, orderReq);
     res.locals.order = order
-    res.locals.auth = req.headers.authorization.split(' ')[1];
+    const authHeader = req.headers.authorization || '';
+    res.locals.auth = authHeader.split(' ')[1] || null;
     const r = await fetch(`${config.factory.url}/api/order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', authorization: `Bearer ${config.factory.apiKey}` },

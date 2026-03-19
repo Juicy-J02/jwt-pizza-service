@@ -78,7 +78,8 @@ franchiseRouter.get(
     if (req.user.id === userId || req.user.isRole(Role.Admin)) {
       result = await DB.getUserFranchises(userId);
     }
-    res.locals.auth = req.headers.authorization.split(' ')[1];
+    const authHeader = req.headers.authorization || '';
+    res.locals.auth = authHeader.split(' ')[1] || null;
     res.json(result);
   })
 );
@@ -95,7 +96,8 @@ franchiseRouter.post(
     }
 
     const franchise = req.body;
-    res.locals.auth = req.headers.authorization.split(' ')[1];
+    const authHeader = req.headers.authorization || '';
+    res.locals.auth = authHeader.split(' ')[1] || null;
     res.send(await DB.createFranchise(franchise));
   })
 );
@@ -108,7 +110,8 @@ franchiseRouter.delete(
   asyncHandler(async (req, res) => {
     const franchiseId = Number(req.params.franchiseId);
     await DB.deleteFranchise(franchiseId);
-    res.locals.auth = req.headers.authorization.split(' ')[1];
+    const authHeader = req.headers.authorization || '';
+    res.locals.auth = authHeader.split(' ')[1] || null;
     res.json({ message: 'franchise deleted' });
   })
 );
@@ -125,7 +128,8 @@ franchiseRouter.post(
     if (!franchise || (!req.user.isRole(Role.Admin) && !franchise.admins.some((admin) => admin.id === req.user.id))) {
       throw new StatusCodeError('unable to create a store', 403);
     }
-    res.locals.auth = req.headers.authorization.split(' ')[1];
+    const authHeader = req.headers.authorization || '';
+    res.locals.auth = authHeader.split(' ')[1] || null;
     res.send(await DB.createStore(franchise.id, req.body));
   })
 );
@@ -145,7 +149,8 @@ franchiseRouter.delete(
 
     const storeId = Number(req.params.storeId);
     await DB.deleteStore(franchiseId, storeId);
-    res.locals.auth = req.headers.authorization.split(' ')[1];
+    const authHeader = req.headers.authorization || '';
+    res.locals.auth = authHeader.split(' ')[1] || null;
     res.json({ message: 'store deleted' });
   })
 );

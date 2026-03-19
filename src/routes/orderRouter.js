@@ -54,6 +54,7 @@ orderRouter.get(
 orderRouter.put(
   '/menu',
   metrics.requestTracker,
+  metrics.activeUserTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     if (!req.user.isRole(Role.Admin)) {
@@ -62,6 +63,7 @@ orderRouter.put(
 
     const addMenuItemReq = req.body;
     await DB.addMenuItem(addMenuItemReq);
+    res.locals.auth = req.headers.authorization.split(' ')[1];
     res.send(await DB.getMenu());
   })
 );
@@ -70,8 +72,10 @@ orderRouter.put(
 orderRouter.get(
   '/',
   metrics.requestTracker,
+  metrics.activeUserTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
+    res.locals.auth = req.headers.authorization.split(' ')[1];
     res.json(await DB.getOrders(req.user, req.query.page));
   })
 );
@@ -80,12 +84,14 @@ orderRouter.get(
 orderRouter.post(
   '/',
   metrics.requestTracker,
+  metrics.activeUserTracker,
   metrics.pizzaTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const orderReq = req.body;
     const order = await DB.addDinerOrder(req.user, orderReq);
     res.locals.order = order
+    res.locals.auth = req.headers.authorization.split(' ')[1];
     const r = await fetch(`${config.factory.url}/api/order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', authorization: `Bearer ${config.factory.apiKey}` },

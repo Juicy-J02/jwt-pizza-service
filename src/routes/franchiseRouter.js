@@ -70,6 +70,7 @@ franchiseRouter.get(
 franchiseRouter.get(
   '/:userId',
   metrics.requestTracker,
+  metrics.activeUserTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     let result = [];
@@ -77,7 +78,7 @@ franchiseRouter.get(
     if (req.user.id === userId || req.user.isRole(Role.Admin)) {
       result = await DB.getUserFranchises(userId);
     }
-
+    res.locals.auth = req.headers.authorization.split(' ')[1];
     res.json(result);
   })
 );
@@ -86,7 +87,7 @@ franchiseRouter.get(
 franchiseRouter.post(
   '/',
   metrics.requestTracker,
-  metrics.requestTracker,
+  metrics.activeUserTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     if (!req.user.isRole(Role.Admin)) {
@@ -94,6 +95,7 @@ franchiseRouter.post(
     }
 
     const franchise = req.body;
+    res.locals.auth = req.headers.authorization.split(' ')[1];
     res.send(await DB.createFranchise(franchise));
   })
 );
@@ -102,9 +104,11 @@ franchiseRouter.post(
 franchiseRouter.delete(
   '/:franchiseId',
   metrics.requestTracker,
+  metrics.activeUserTracker,
   asyncHandler(async (req, res) => {
     const franchiseId = Number(req.params.franchiseId);
     await DB.deleteFranchise(franchiseId);
+    res.locals.auth = req.headers.authorization.split(' ')[1];
     res.json({ message: 'franchise deleted' });
   })
 );
@@ -113,6 +117,7 @@ franchiseRouter.delete(
 franchiseRouter.post(
   '/:franchiseId/store',
   metrics.requestTracker,
+  metrics.activeUserTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const franchiseId = Number(req.params.franchiseId);
@@ -120,7 +125,7 @@ franchiseRouter.post(
     if (!franchise || (!req.user.isRole(Role.Admin) && !franchise.admins.some((admin) => admin.id === req.user.id))) {
       throw new StatusCodeError('unable to create a store', 403);
     }
-
+    res.locals.auth = req.headers.authorization.split(' ')[1];
     res.send(await DB.createStore(franchise.id, req.body));
   })
 );
@@ -129,6 +134,7 @@ franchiseRouter.post(
 franchiseRouter.delete(
   '/:franchiseId/store/:storeId',
   metrics.requestTracker,
+  metrics.activeUserTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const franchiseId = Number(req.params.franchiseId);
@@ -139,6 +145,7 @@ franchiseRouter.delete(
 
     const storeId = Number(req.params.storeId);
     await DB.deleteStore(franchiseId, storeId);
+    res.locals.auth = req.headers.authorization.split(' ')[1];
     res.json({ message: 'store deleted' });
   })
 );

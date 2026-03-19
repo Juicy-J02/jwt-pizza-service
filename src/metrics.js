@@ -5,6 +5,7 @@ const os = require('os');
 const requests = {};
 const authRequests = {};
 const pizzaRequests = {};
+let activeUsers = new Map();
 let requestLatency = 0;
 let pizzaLatency = 0
 let pizzaPrice = 0;
@@ -17,6 +18,21 @@ function requestTracker(req, res, next) {
   res.on('finish', () => {
     const end = new Date();
     requestLatency = end - start;
+  });
+  next();
+}
+
+function activeUserTracker(req, res, next) {
+  res.on('finish', () => {
+    if (res.locals.type == "login") {
+      activeUsers.set(res.locals.auth, new Date());
+    }
+    else if (res.locals.type == "logout") {
+      activeUsers.delete(res.locals.auth);
+    }
+    else {
+      activeUsers.set(res.locals.auth, new Date());
+    }
   });
   next();
 }
@@ -75,6 +91,14 @@ setInterval(() => {
   Object.keys(pizzaRequests).forEach((status) => {
     metrics.push(createMetric('pizza_total', pizzaRequests[status], '1', 'sum', 'asInt', { status }));
   });
+
+  metrics.push(createMetric('active_users', activeUsers.size, '1', 'gauge', 'asInt'));
+
+  for (const [user, timestamp] of activeUsers) {
+    if (timestamp.getTime() < Date.now() - 100000) {
+      activeUsers.delete(user);
+    }
+  }
 
   metrics.push(createMetric('pizza_price_total', pizzaPrice, '1', 'sum', 'asDouble', {}));
 
@@ -149,4 +173,4 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
-module.exports = { requestTracker, authTracker, pizzaTracker };
+module.exports = { requestTracker, activeUserTracker, authTracker, pizzaTracker };

@@ -54,8 +54,10 @@ userRouter.docs = [
 userRouter.get(
   '/me',
   metrics.requestTracker,
+  metrics.activeUserTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
+    res.locals.auth = req.headers.authorization.split(' ')[1];
     res.json(req.user);
   })
 );
@@ -64,6 +66,7 @@ userRouter.get(
 userRouter.put(
   '/:userId',
   metrics.requestTracker,
+  metrics.activeUserTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
@@ -83,10 +86,12 @@ userRouter.put(
 userRouter.delete(
   '/:userId',
   metrics.requestTracker,
+  metrics.activeUserTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const userId = Number(req.params.userId)
     await DB.deleteUser(userId);
+    res.locals.auth = req.headers.authorization.split(' ')[1];
     res.json({ message: 'user deleted' });
   })
 );
@@ -95,9 +100,11 @@ userRouter.delete(
 userRouter.get(
   '/',
   metrics.requestTracker,
+  metrics.activeUserTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const [users, more] = await DB.getAllUsers(req.query.page, req.query.limit, req.query.name);
+    res.locals.auth = req.headers.authorization.split(' ')[1];
     res.json({ users, more })
   })
 );

@@ -60,6 +60,7 @@ authRouter.authenticateToken = (req, res, next) => {
 authRouter.post(
   '/',
   metrics.requestTracker,
+  metrics.activeUserTracker,
   metrics.authTracker,
   asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
@@ -68,6 +69,8 @@ authRouter.post(
     }
     const user = await DB.addUser({ name, email, password, roles: [{ role: Role.Diner }] });
     const auth = await setAuth(user);
+    res.locals.auth = auth
+    res.locals.type = "login"
     res.json({ user: user, token: auth });
   })
 );
@@ -76,11 +79,14 @@ authRouter.post(
 authRouter.put(
   '/',
   metrics.requestTracker,
+  metrics.activeUserTracker,
   metrics.authTracker,
   asyncHandler(async (req, res) => {
     const { email, password } = req.body;
     const user = await DB.getUser(email, password);
     const auth = await setAuth(user);
+    res.locals.auth = auth
+    res.locals.type = "login"
     res.json({ user: user, token: auth });
   })
 );
@@ -89,10 +95,13 @@ authRouter.put(
 authRouter.delete(
   '/',
   metrics.requestTracker,
+  metrics.activeUserTracker,
   metrics.authTracker,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     await clearAuth(req);
+    res.locals.auth = req.headers.authorization.split(' ')[1];
+    res.locals.type = "logout"
     res.json({ message: 'logout successful' });
   })
 );

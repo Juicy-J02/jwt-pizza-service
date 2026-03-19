@@ -111,8 +111,6 @@ describe('metrics coverage', () => {
     // Re-require to ensure interval runs under fake timers
     jest.resetModules();
 
-    const metricsModule = require('./metrics');
-
     // Fast-forward interval
     jest.advanceTimersByTime(10000);
 

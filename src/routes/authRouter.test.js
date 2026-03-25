@@ -66,7 +66,7 @@ test('Logout', async () => {
 });
 
 test('Logout Error', async () => {
-    const res = await request(app).delete('/api/auth'); // No token provided
+    const res = await request(app).delete('/api/auth');
     expect(res.status).toBe(401);
 });
 

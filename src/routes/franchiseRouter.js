@@ -3,6 +3,7 @@ const { DB, Role } = require('../database/database.js');
 const { authRouter } = require('./authRouter.js');
 const { StatusCodeError, asyncHandler } = require('../endpointHelper.js');
 const metrics = require('../metrics');
+const logger = require('../logger.js');
 
 const franchiseRouter = express.Router();
 
@@ -60,6 +61,7 @@ franchiseRouter.docs = [
 franchiseRouter.get(
   '/',
   metrics.requestTracker,
+  logger.httpLogger,
   asyncHandler(async (req, res) => {
     const [franchises, more] = await DB.getFranchises(req.user, req.query.page, req.query.limit, req.query.name);
     res.json({ franchises, more });
@@ -71,6 +73,7 @@ franchiseRouter.get(
   '/:userId',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     let result = [];
@@ -89,6 +92,7 @@ franchiseRouter.post(
   '/',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     if (!req.user.isRole(Role.Admin)) {
@@ -107,6 +111,7 @@ franchiseRouter.delete(
   '/:franchiseId',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  logger.httpLogger,
   asyncHandler(async (req, res) => {
     const franchiseId = Number(req.params.franchiseId);
     await DB.deleteFranchise(franchiseId);
@@ -121,6 +126,7 @@ franchiseRouter.post(
   '/:franchiseId/store',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const franchiseId = Number(req.params.franchiseId);
@@ -139,6 +145,7 @@ franchiseRouter.delete(
   '/:franchiseId/store/:storeId',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const franchiseId = Number(req.params.franchiseId);

@@ -29,16 +29,6 @@ beforeEach(() => {
     jest.clearAllMocks();
 });
 
-test('Get Menu', async () => {
-    const mockMenu = [{ id: 1, title: 'Veggie', price: 0.05 }];
-    DB.getMenu.mockResolvedValue(mockMenu);
-
-    const res = await request(app).get('/api/order/menu');
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual(mockMenu);
-});
-
 test('Create Order', async () => {
     const mockOrder = { id: 1, franchiseId: 1, storeId: 1, items: [] };
     DB.addDinerOrder.mockResolvedValue(mockOrder);

@@ -4,6 +4,7 @@ const { Role, DB } = require('../database/database.js');
 const { authRouter } = require('./authRouter.js');
 const { asyncHandler, StatusCodeError } = require('../endpointHelper.js');
 const metrics = require('../metrics');
+const logger = require('../logger.js');
 
 const orderRouter = express.Router();
 
@@ -45,6 +46,7 @@ orderRouter.docs = [
 orderRouter.get(
   '/menu',
   metrics.requestTracker,
+  logger.httpLogger,
   asyncHandler(async (req, res) => {
     res.send(await DB.getMenu());
   })
@@ -55,6 +57,7 @@ orderRouter.put(
   '/menu',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     if (!req.user.isRole(Role.Admin)) {
@@ -74,6 +77,7 @@ orderRouter.get(
   '/',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const authHeader = req.headers.authorization || '';
@@ -88,6 +92,7 @@ orderRouter.post(
   metrics.requestTracker,
   metrics.activeUserTracker,
   metrics.pizzaTracker,
+  logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const orderReq = req.body;
@@ -95,17 +100,29 @@ orderRouter.post(
     res.locals.order = order
     const authHeader = req.headers.authorization || '';
     res.locals.auth = authHeader.split(' ')[1] || null;
+    const factoryBody = { diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order };
+    const jsonBody = JSON.stringify(factoryBody)
     const r = await fetch(`${config.factory.url}/api/order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', authorization: `Bearer ${config.factory.apiKey}` },
-      body: JSON.stringify({ diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order }),
+      body: jsonBody
     });
     const j = await r.json();
     console.log("FACTORY RESPONSE:", r.status, j);
     if (r.ok) {
       res.send({ order, followLinkToEndChaos: j.reportUrl, jwt: j.jwt });
+      logger.log('info', 'factory request', {
+        statusCode: 200,
+        reqBody: JSON.stringify(factoryBody),
+        resBody: JSON.stringify(j),
+      })
     } else {
       res.status(500).send({ message: 'Failed to fulfill order at factory', followLinkToEndChaos: j.reportUrl });
+      logger.log('error', 'factory request', {
+        statusCode: 500,
+        reqBody: JSON.stringify(factoryBody),
+        resBody: JSON.stringify(j),
+      })
     }
   })
 );

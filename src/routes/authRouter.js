@@ -4,6 +4,7 @@ const config = require('../config.js');
 const { asyncHandler } = require('../endpointHelper.js');
 const { DB, Role } = require('../database/database.js');
 const metrics = require('../metrics');
+const logger = require('../logger.js')
 
 const authRouter = express.Router();
 
@@ -62,6 +63,7 @@ authRouter.post(
   metrics.requestTracker,
   metrics.activeUserTracker,
   metrics.authTracker,
+  logger.httpLogger,
   asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
@@ -81,6 +83,7 @@ authRouter.put(
   metrics.requestTracker,
   metrics.activeUserTracker,
   metrics.authTracker,
+  logger.httpLogger,
   asyncHandler(async (req, res) => {
     const { email, password } = req.body;
     const user = await DB.getUser(email, password);
@@ -97,6 +100,7 @@ authRouter.delete(
   metrics.requestTracker,
   metrics.activeUserTracker,
   metrics.authTracker,
+  logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     await clearAuth(req);

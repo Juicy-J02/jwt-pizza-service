@@ -3,6 +3,7 @@ const { asyncHandler } = require('../endpointHelper.js');
 const { DB, Role } = require('../database/database.js');
 const { authRouter, setAuth } = require('./authRouter.js');
 const metrics = require('../metrics');
+const logger = require('../logger.js');
 
 const userRouter = express.Router();
 
@@ -55,6 +56,7 @@ userRouter.get(
   '/me',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     res.locals.auth = req.headers.authorization.split(' ')[1];
@@ -67,6 +69,7 @@ userRouter.put(
   '/:userId',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
@@ -87,6 +90,7 @@ userRouter.delete(
   '/:userId',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const userId = Number(req.params.userId)
@@ -101,6 +105,7 @@ userRouter.get(
   '/',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const [users, more] = await DB.getAllUsers(req.query.page, req.query.limit, req.query.name);

@@ -4,6 +4,7 @@ const config = require('../config.js');
 const { StatusCodeError } = require('../endpointHelper.js');
 const { Role } = require('../model/model.js');
 const dbModel = require('./dbModel.js');
+const logger = require('../logger.js');
 class DB {
   constructor() {
     this.initialized = this.initializeDatabase();
@@ -88,7 +89,7 @@ class DB {
                                                 ON u.id = r.userId
                                                 WHERE name LIKE ?
                                                 LIMIT ${limit + 1} OFFSET ${offset}`, [nameFilter]);
-      
+
       const map = new Map();
 
       for (const row of users) {
@@ -357,8 +358,17 @@ class DB {
   }
 
   async query(connection, sql, params) {
-    const [results] = await connection.execute(sql, params);
-    return results;
+    try {
+      const [results] = await connection.execute(sql, params);
+      logger.log('info', 'db', {
+        reqBody: sql
+      });
+      return results;
+    } catch (error) {
+      logger.log('error', 'db', {
+        reqBody: sql
+      });
+    }
   }
 
   async getID(connection, key, value, table) {

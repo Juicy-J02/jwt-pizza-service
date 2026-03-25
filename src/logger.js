@@ -1,4 +1,3 @@
-const { source } = require('../../loggingExample/config');
 const config = require('./config');
 
 class Logger {

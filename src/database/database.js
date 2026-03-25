@@ -364,7 +364,7 @@ class DB {
         reqBody: sql
       });
       return results;
-    } catch (error) {
+    } catch {
       logger.log('error', 'db', {
         reqBody: sql
       });

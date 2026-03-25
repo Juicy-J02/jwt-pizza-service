@@ -19,6 +19,11 @@ jest.mock('./authRouter', () => ({
   },
 }));
 
+jest.mock('../logger', () => ({
+  log: jest.fn(),
+  error: jest.fn(),
+}));
+
 global.fetch = jest.fn();
 
 const app = express();

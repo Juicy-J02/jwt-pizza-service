@@ -1,130 +1,120 @@
+const request = require('supertest');
 const express = require('express');
-const config = require('../config.js');
-const { Role, DB } = require('../database/database.js');
-const { authRouter } = require('./authRouter.js');
-const { asyncHandler, StatusCodeError } = require('../endpointHelper.js');
-const metrics = require('../metrics');
-const logger = require('../logger.js');
 
-const orderRouter = express.Router();
+// 1. MOCK LOGGER
+jest.mock('../logger', () => ({
+  log: jest.fn(),
+  error: jest.fn(),
+  httpLogger: (req, res, next) => next(),
+}));
 
-orderRouter.docs = [
-  {
-    method: 'GET',
-    path: '/api/order/menu',
-    description: 'Get the pizza menu',
-    example: `curl localhost:3000/api/order/menu`,
-    response: [{ id: 1, title: 'Veggie', image: 'pizza1.png', price: 0.0038, description: 'A garden of delight' }],
+// 2. MOCK METRICS (Including all trackers used in the router)
+jest.mock('../metrics', () => ({
+  requestTracker: (req, res, next) => next(),
+  activeUserTracker: (req, res, next) => next(),
+  pizzaTracker: (req, res, next) => next(),
+}));
+
+// 3. MOCK DATABASE
+jest.mock('../database/database', () => ({
+  // We mock Role so Role.Admin exists for the middleware check
+  Role: {
+    Admin: 'admin',
+    Diner: 'diner',
   },
-  {
-    method: 'PUT',
-    path: '/api/order/menu',
-    requiresAuth: true,
-    description: 'Add an item to the menu',
-    example: `curl -X PUT localhost:3000/api/order/menu -H 'Content-Type: application/json' -d '{ "title":"Student", "description": "No topping, no sauce, just carbs", "image":"pizza9.png", "price": 0.0001 }'  -H 'Authorization: Bearer tttttt'`,
-    response: [{ id: 1, title: 'Student', description: 'No topping, no sauce, just carbs', image: 'pizza9.png', price: 0.0001 }],
+  DB: {
+    addDinerOrder: jest.fn(),
+    getMenu: jest.fn(),
+    addMenuItem: jest.fn(),
+    getOrders: jest.fn(),
   },
-  {
-    method: 'GET',
-    path: '/api/order',
-    requiresAuth: true,
-    description: 'Get the orders for the authenticated user',
-    example: `curl -X GET localhost:3000/api/order  -H 'Authorization: Bearer tttttt'`,
-    response: { dinerId: 4, orders: [{ id: 1, franchiseId: 1, storeId: 1, date: '2024-06-05T05:14:40.000Z', items: [{ id: 1, menuId: 1, description: 'Veggie', price: 0.05 }] }], page: 1 },
+}));
+
+// 4. MOCK AUTH
+jest.mock('./authRouter', () => ({
+  authRouter: {
+    authenticateToken: jest.fn((req, res, next) => {
+      req.user = { 
+        id: 4, 
+        name: 'test diner', 
+        email: 'diner@test.com',
+        roles: [{ role: 'diner' }], 
+        // Implement the helper function the router expects
+        isRole: (role) => (req.user.roles || []).some(r => r.role === role) 
+      };
+      next();
+    }),
   },
-  {
-    method: 'POST',
-    path: '/api/order',
-    requiresAuth: true,
-    description: 'Create a order for the authenticated user',
-    example: `curl -X POST localhost:3000/api/order -H 'Content-Type: application/json' -d '{"franchiseId": 1, "storeId":1, "items":[{ "menuId": 1, "description": "Veggie", "price": 0.05 }]}'  -H 'Authorization: Bearer tttttt'`,
-    response: { order: { franchiseId: 1, storeId: 1, items: [{ menuId: 1, description: 'Veggie', price: 0.05 }], id: 1 }, jwt: '1111111111' },
-  },
-];
+}));
 
-// getMenu
-orderRouter.get(
-  '/menu',
-  metrics.requestTracker,
-  logger.httpLogger,
-  asyncHandler(async (req, res) => {
-    res.send(await DB.getMenu());
-  })
-);
+// 5. REQUIRE AFTER MOCKS
+const orderRouter = require('./orderRouter');
+const { DB } = require('../database/database');
 
-// addMenuItem
-orderRouter.put(
-  '/menu',
-  metrics.requestTracker,
-  metrics.activeUserTracker,
-  logger.httpLogger,
-  authRouter.authenticateToken,
-  asyncHandler(async (req, res) => {
-    if (!req.user.isRole(Role.Admin)) {
-      throw new StatusCodeError('unable to add menu item', 403);
-    }
+// 6. SETUP APP
+global.fetch = jest.fn();
+const app = express();
+app.use(express.json());
+app.use('/api/order', orderRouter);
 
-    const addMenuItemReq = req.body;
-    await DB.addMenuItem(addMenuItemReq);
-    const authHeader = req.headers.authorization || '';
-    res.locals.auth = authHeader.split(' ')[1] || null;
-    res.send(await DB.getMenu());
-  })
-);
+describe('Order Router Tests', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
-// getOrders
-orderRouter.get(
-  '/',
-  metrics.requestTracker,
-  metrics.activeUserTracker,
-  logger.httpLogger,
-  authRouter.authenticateToken,
-  asyncHandler(async (req, res) => {
-    const authHeader = req.headers.authorization || '';
-    res.locals.auth = authHeader.split(' ')[1] || null;
-    res.json(await DB.getOrders(req.user, req.query.page));
-  })
-);
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
 
-// createOrder
-orderRouter.post(
-  '/',
-  metrics.requestTracker,
-  metrics.activeUserTracker,
-  metrics.pizzaTracker,
-  logger.httpLogger,
-  authRouter.authenticateToken,
-  asyncHandler(async (req, res) => {
-    const orderReq = req.body;
-    const order = await DB.addDinerOrder(req.user, orderReq);
-    res.locals.order = order
-    const authHeader = req.headers.authorization || '';
-    res.locals.auth = authHeader.split(' ')[1] || null;
-    const factoryBody = { diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order };
-    const jsonBody = JSON.stringify(factoryBody)
-    const r = await fetch(`${config.factory.url}/api/order`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${config.factory.apiKey}` },
-      body: jsonBody
+  test('Create Order Success', async () => {
+    const mockOrder = { id: 1, franchiseId: 1, storeId: 1, items: [] };
+    DB.addDinerOrder.mockResolvedValue(mockOrder);
+
+    // Mock the factory fetch response
+    global.fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockResolvedValue({ 
+        reportUrl: 'http://chaos.com', 
+        jwt: 'factory-jwt' 
+      }),
     });
-    const j = await r.json();
-    console.log("FACTORY RESPONSE:", r.status, j);
-    if (r.ok) {
-      res.send({ order, followLinkToEndChaos: j.reportUrl, jwt: j.jwt });
-      logger.log('info', 'factory request', {
-        statusCode: 200,
-        reqBody: JSON.stringify(factoryBody),
-        resBody: JSON.stringify(j),
-      })
-    } else {
-      res.status(500).send({ message: 'Failed to fulfill order at factory', followLinkToEndChaos: j.reportUrl });
-      logger.log('error', 'factory request', {
-        statusCode: 500,
-        reqBody: JSON.stringify(factoryBody),
-        resBody: JSON.stringify(j),
-      })
-    }
-  })
-);
 
-module.exports = orderRouter;
+    const res = await request(app)
+      .post('/api/order')
+      .send({ franchiseId: 1, storeId: 1, items: [] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.order).toEqual(mockOrder);
+    expect(res.body.jwt).toBe('factory-jwt');
+    expect(global.fetch).toHaveBeenCalled();
+  });
+
+  test('Create Order Fail at Factory', async () => {
+    DB.addDinerOrder.mockResolvedValue({ id: 1 });
+
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: jest.fn().mockResolvedValue({ reportUrl: 'http://chaos.com' }),
+    });
+
+    const res = await request(app)
+      .post('/api/order')
+      .send({ franchiseId: 1, storeId: 1, items: [] });
+
+    expect(res.status).toBe(500);
+    expect(res.body.message).toMatch(/Failed to fulfill order/);
+  });
+
+  test('Add Menu Item Fail (Unauthorized)', async () => {
+    // The auth mock sets the user role to 'diner'
+    // The router expects Role.Admin (which we mocked as 'admin')
+    const res = await request(app)
+      .put('/api/order/menu')
+      .send({ title: 'New Pizza', price: 0.01 });
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toMatch(/unable to add menu item/);
+  });
+});

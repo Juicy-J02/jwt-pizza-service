@@ -1,3 +1,5 @@
+global.fetch = jest.fn();
+
 const request = require('supertest');
 const express = require('express');
 
@@ -37,7 +39,6 @@ jest.mock('./authRouter', () => ({
 const orderRouter = require('./orderRouter');
 const { DB } = require('../database/database');
 
-global.fetch = jest.fn();
 const app = express();
 app.use(express.json());
 app.use('/api/order', orderRouter);

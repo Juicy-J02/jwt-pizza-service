@@ -154,3 +154,5 @@ jobs:
           curl -X POST https://juicyj02.grafana.net/api/annotations -H "Authorization: Bearer ${{ secrets.GRAFANA_ACCESS_TOKEN }}" -H "Content-Type:application/json" -d '{"dashboardUID":"jr9kg4j", "panelId":8, "text":"Version '"$version"' deployed" }'
           curl -X POST https://juicyj02.grafana.net/api/annotations -H "Authorization: Bearer ${{ secrets.GRAFANA_ACCESS_TOKEN }}" -H "Content-Type:application/json" -d '{"dashboardUID":"jr9kg4j", "panelId":9, "text":"Version '"$version"' deployed" }'
           curl -X POST https://juicyj02.grafana.net/api/annotations -H "Authorization: Bearer ${{ secrets.GRAFANA_ACCESS_TOKEN }}" -H "Content-Type:application/json" -d '{"dashboardUID":"jr9kg4j", "panelId":10, "text":"Version '"$version"' deployed" }'
+
+          

@@ -39,7 +39,6 @@ jest.mock('./authRouter', () => ({
 
 const orderRouter = require('./orderRouter');
 const { DB } = require('../database/database');
-const { chaosTracker } = require('../metrics');
 
 const app = express();
 app.use(express.json());

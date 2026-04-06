@@ -103,6 +103,13 @@ describe('metrics coverage', () => {
       metrics.pizzaTracker(req, res, next);
       events.finish();
     }
+
+    {
+      const { req, res, next, events } = createMockReqRes();
+      res.statusCode = 500
+      metrics.chaosTracker(req, res, next);
+      events.finish();
+    }
   });
 
   test('trigger metric sending block', async () => {

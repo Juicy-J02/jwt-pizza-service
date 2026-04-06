@@ -9,6 +9,7 @@ let activeUsers = new Map();
 let requestLatency = 0;
 let pizzaLatency = 0
 let pizzaPrice = 0;
+let chaos = 0;
 
 // Middleware to track requests
 function requestTracker(req, res, next) {
@@ -64,6 +65,15 @@ function pizzaTracker(req, res, next) {
   next();
 }
 
+function chaosTracker(req, res, next) {
+  res.on('finish', () => {
+    if (res.statusCode >= 500) {
+      chaos += 1
+    }
+  });
+  next();
+}
+
 function getCpuUsagePercentage() {
   const cpuUsage = os.loadavg()[0] / os.cpus().length;
   return cpuUsage.toFixed(2) * 100;
@@ -109,6 +119,8 @@ setInterval(() => {
   metrics.push(createMetric('request_latency', requestLatency, 'ms', 'gauge', 'asDouble', {}));
 
   metrics.push(createMetric('pizza_latency', pizzaLatency, 'ms', 'gauge', 'asDouble', {}));
+
+  metrics.push(createMetric('chaos', chaos, '1', 'sum', 'asInt', {}));
 
   sendMetricToGrafana(metrics);
 }, 10000);
@@ -173,4 +185,4 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
-module.exports = { requestTracker, activeUserTracker, authTracker, pizzaTracker };
+module.exports = { requestTracker, activeUserTracker, authTracker, pizzaTracker, chaosTracker };

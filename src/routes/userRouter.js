@@ -56,6 +56,7 @@ userRouter.get(
   '/me',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
@@ -69,6 +70,7 @@ userRouter.put(
   '/:userId',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
@@ -90,6 +92,7 @@ userRouter.delete(
   '/:userId',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
@@ -105,6 +108,7 @@ userRouter.get(
   '/',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {

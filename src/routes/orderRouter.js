@@ -46,6 +46,7 @@ orderRouter.docs = [
 orderRouter.get(
   '/menu',
   metrics.requestTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   asyncHandler(async (req, res) => {
     res.send(await DB.getMenu());
@@ -57,6 +58,7 @@ orderRouter.put(
   '/menu',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
@@ -77,6 +79,7 @@ orderRouter.get(
   '/',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
@@ -92,6 +95,7 @@ orderRouter.post(
   metrics.requestTracker,
   metrics.activeUserTracker,
   metrics.pizzaTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {

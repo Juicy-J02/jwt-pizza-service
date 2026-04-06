@@ -63,6 +63,7 @@ authRouter.post(
   metrics.requestTracker,
   metrics.activeUserTracker,
   metrics.authTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
@@ -83,6 +84,7 @@ authRouter.put(
   metrics.requestTracker,
   metrics.activeUserTracker,
   metrics.authTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   asyncHandler(async (req, res) => {
     const { email, password } = req.body;
@@ -100,6 +102,7 @@ authRouter.delete(
   metrics.requestTracker,
   metrics.activeUserTracker,
   metrics.authTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {

@@ -61,6 +61,7 @@ franchiseRouter.docs = [
 franchiseRouter.get(
   '/',
   metrics.requestTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   asyncHandler(async (req, res) => {
     const [franchises, more] = await DB.getFranchises(req.user, req.query.page, req.query.limit, req.query.name);
@@ -73,6 +74,7 @@ franchiseRouter.get(
   '/:userId',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
@@ -92,6 +94,7 @@ franchiseRouter.post(
   '/',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
@@ -111,6 +114,7 @@ franchiseRouter.delete(
   '/:franchiseId',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   asyncHandler(async (req, res) => {
     const franchiseId = Number(req.params.franchiseId);
@@ -126,6 +130,7 @@ franchiseRouter.post(
   '/:franchiseId/store',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
@@ -145,6 +150,7 @@ franchiseRouter.delete(
   '/:franchiseId/store/:storeId',
   metrics.requestTracker,
   metrics.activeUserTracker,
+  metrics.chaosTracker,
   logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {

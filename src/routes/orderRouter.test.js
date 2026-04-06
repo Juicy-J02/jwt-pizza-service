@@ -7,6 +7,7 @@ jest.mock('../metrics', () => ({
     requestTracker: (req, res, next) => next(),
     activeUserTracker: (req, res, next) => next(),
     pizzaTracker: (req, res, next) => next(),
+    chaosTracker: (req, res, next) => next(),
 }));
 
 jest.mock('../logger', () => ({
@@ -38,6 +39,7 @@ jest.mock('./authRouter', () => ({
 
 const orderRouter = require('./orderRouter');
 const { DB } = require('../database/database');
+const { chaosTracker } = require('../metrics');
 
 const app = express();
 app.use(express.json());

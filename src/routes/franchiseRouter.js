@@ -119,10 +119,7 @@ franchiseRouter.delete(
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const franchiseId = Number(req.params.franchiseId);
-    const user = req.user;
-    if (!user.isRole(Role.Admin)) {
-      return res.status(403).json({ message: 'unauthorized' });
-    }
+    
     await DB.deleteFranchise(franchiseId);
     const authHeader = req.headers.authorization || '';
     res.locals.auth = authHeader.split(' ')[1] || null;

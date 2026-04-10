@@ -100,7 +100,15 @@ orderRouter.post(
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const orderReq = req.body;
-    const order = await DB.addDinerOrder(req.user, orderReq);
+    let order;
+    try {
+        order = await DB.addDinerOrder(req.user, orderReq);
+      } catch (err) {
+        console.error("DB ERROR:", err);
+        return res.status(err.statusCode || 400).send({
+          message: err.message || "Invalid order"
+        });
+      }
     res.locals.order = order
     const authHeader = req.headers.authorization || '';
     res.locals.auth = authHeader.split(' ')[1] || null;

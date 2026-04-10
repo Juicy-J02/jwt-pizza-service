@@ -97,46 +97,76 @@ orderRouter.post(
   metrics.pizzaTracker,
   metrics.chaosTracker,
   logger.httpLogger,
+  validateOrder,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
-    const orderReq = req.body;
-    let order;
     try {
-        order = await DB.addDinerOrder(req.user, orderReq);
-      } catch (err) {
-        console.error("DB ERROR:", err);
-        return res.status(err.statusCode || 400).send({
-          message: err.message || "Invalid order"
-        });
+      const orderReq = req.body;
+      const order = await DB.addDinerOrder(req.user, orderReq);
+      res.locals.order = order
+      const authHeader = req.headers.authorization || '';
+      res.locals.auth = authHeader.split(' ')[1] || null;
+      const factoryBody = { diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order };
+      const jsonBody = JSON.stringify(factoryBody)
+      const r = await fetch(`${config.factory.url}/api/order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${config.factory.apiKey}` },
+        body: jsonBody
+      });
+      const j = await r.json();
+      console.log("FACTORY RESPONSE:", r.status, j);
+      if (r.ok) {
+        res.send({ order, followLinkToEndChaos: j.reportUrl, jwt: j.jwt });
+        logger.log('info', 'factory request', {
+          statusCode: 200,
+          reqBody: JSON.stringify(factoryBody),
+          resBody: JSON.stringify(j),
+        })
+      } else {
+        res.status(500).send({ message: 'Failed to fulfill order at factory', followLinkToEndChaos: j.reportUrl });
+        logger.log('error', 'factory request', {
+          statusCode: 500,
+          reqBody: JSON.stringify(factoryBody),
+          resBody: JSON.stringify(j),
+        })
       }
-    res.locals.order = order
-    const authHeader = req.headers.authorization || '';
-    res.locals.auth = authHeader.split(' ')[1] || null;
-    const factoryBody = { diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order };
-    const jsonBody = JSON.stringify(factoryBody)
-    const r = await fetch(`${config.factory.url}/api/order`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${config.factory.apiKey}` },
-      body: jsonBody
-    });
-    const j = await r.json();
-    console.log("FACTORY RESPONSE:", r.status, j);
-    if (r.ok) {
-      res.send({ order, followLinkToEndChaos: j.reportUrl, jwt: j.jwt });
-      logger.log('info', 'factory request', {
-        statusCode: 200,
-        reqBody: JSON.stringify(factoryBody),
-        resBody: JSON.stringify(j),
-      })
-    } else {
-      res.status(500).send({ message: 'Failed to fulfill order at factory', followLinkToEndChaos: j.reportUrl });
-      logger.log('error', 'factory request', {
-        statusCode: 500,
-        reqBody: JSON.stringify(factoryBody),
-        resBody: JSON.stringify(j),
-      })
+    } catch (error) {
+      console.error('Order route failed:', error);
+
+      if (error.name === 'AbortError') {
+        return res.status(504).send({ message: 'Factory timeout' });
+      }
+
+      return res.status(error.statusCode || 500).send({
+        message: error.message || 'Internal server error'
+      });
     }
   })
 );
+
+function validateOrder(req, res, next) {
+  const order = req.body;
+
+  if (!order || !order.storeId || !order.franchiseId) {
+    return res.status(400).send({ message: 'Missing required order fields' });
+  }
+
+  if (!Array.isArray(order.items) || order.items.length === 0) {
+    return res.status(400).send({ message: 'Order must include at least one item' });
+  }
+
+  for (const item of order.items) {
+    if (
+      !item ||
+      !item.menuId ||
+      !item.description ||
+      item.price == null
+    ) {
+      return res.status(400).send({ message: 'Invalid order item' });
+    }
+  }
+
+  next();
+}
 
 module.exports = orderRouter;

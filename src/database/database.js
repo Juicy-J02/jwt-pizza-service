@@ -210,9 +210,8 @@ class DB {
   }
 
   async addDinerOrder(user, order) {
+    const connection = await this.getConnection();
     try {
-      const connection = await this.getConnection();
-
       if (!user) {
         throw new StatusCodeError('unauthorized', 401);
       }
@@ -233,7 +232,7 @@ class DB {
       }
       return { ...order, id: orderId };
     } finally {
-      connection.release();
+      connection.end();
     }
   }
 

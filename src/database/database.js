@@ -213,14 +213,17 @@ class DB {
     const connection = await this.getConnection();
     try {
       if (!user) {
+        connection.end();
         throw new StatusCodeError('unauthorized', 401);
       }
 
       if (!order || !order.items || !order.storeId || !order.franchiseId) {
+        connection.end();
         throw new StatusCodeError('bad request', 400);
       }
 
       if (!Array.isArray(order.items) || order.items.length === 0) {
+        connection.end();
         throw new StatusCodeError('order must include at least one item', 400);
       }
 

@@ -134,8 +134,11 @@ test('addUser correctly inserts franchisee roles', async () => {
     };
 
     mockConnection.execute
-        .mockResolvedValueOnce([{ insertId: 10 }])
-        .mockResolvedValueOnce([[{ id: 99 }]]);
+    mockConnection.execute
+        .mockResolvedValueOnce([[]]) // no duplicate user
+        .mockResolvedValueOnce([{ insertId: 10 }]) // insert user
+        .mockResolvedValueOnce([[{ id: 99 }]]) // franchise lookup
+        .mockResolvedValueOnce([]); // insert role
 
     const result = await DB.addUser(mockUser);
 
@@ -144,6 +147,8 @@ test('addUser correctly inserts franchisee roles', async () => {
         expect.stringMatching(/INSERT INTO userRole/),
         [10, Role.Franchisee, 99]
     );
+
+    await DB.deleteUser(10);
 });
 
 test('deleteUser', async () => {
@@ -155,12 +160,14 @@ test('deleteUser', async () => {
     };
 
     mockConnection.execute
-        .mockResolvedValueOnce([{ insertId: 10 }])
-        .mockResolvedValueOnce([[{ id: 99 }]]);
+        .mockResolvedValueOnce([[]]) // no duplicate user
+        .mockResolvedValueOnce([{ insertId: 10 }]) // insert user
+        .mockResolvedValueOnce([[{ id: 99 }]]) // franchise lookup
+        .mockResolvedValueOnce([]); // insert role
 
     await DB.addUser(mockUser);
-    
-    await DB.deleteUser(mockUser);
+
+    await DB.deleteUser(10);
 
     await expect(DB.getUser('t@test.com', 'password')).rejects.toThrow('unknown user');
 })

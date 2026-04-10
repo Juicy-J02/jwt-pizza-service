@@ -100,7 +100,7 @@ orderRouter.post(
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     if (!req.body.items || !req.body.franchiseId || !req.body.storeId) {
-      return
+      return new StatusCodeError('bad request', 400);
     }
     const orderReq = req.body;
     const order = await DB.addDinerOrder(req.user, orderReq);

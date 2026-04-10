@@ -99,6 +99,9 @@ orderRouter.post(
   logger.httpLogger,
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
+    if (!req.body.items || !req.body.franchiseId || !req.body.storeId) {
+      return
+    }
     const orderReq = req.body;
     const order = await DB.addDinerOrder(req.user, orderReq);
     res.locals.order = order

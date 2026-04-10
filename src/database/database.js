@@ -212,9 +212,18 @@ class DB {
   async addDinerOrder(user, order) {
     const connection = await this.getConnection();
     try {
-      if (!user || !order.items || !order.storeId || !order.franchiseId) {
+      if (!user) {
+        throw new StatusCodeError('unauthorized', 401);
+      }
+
+      if (!order || !order.items || !order.storeId || !order.franchiseId) {
         throw new StatusCodeError('bad request', 400);
       }
+
+      if (!Array.isArray(order.items) || order.items.length === 0) {
+        throw new StatusCodeError('order must include at least one item', 400);
+      }
+
       const orderResult = await this.query(connection, `INSERT INTO dinerOrder (dinerId, franchiseId, storeId, date) VALUES (?, ?, ?, now())`, [user.id, order.franchiseId, order.storeId]);
       const orderId = orderResult.insertId;
       for (const item of order.items) {

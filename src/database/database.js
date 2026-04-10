@@ -228,7 +228,9 @@ class DB {
       const orderId = orderResult.insertId;
       for (const item of order.items) {
         const menuId = await this.getID(connection, 'id', item.menuId, 'menu');
-        await this.query(connection, `INSERT INTO orderItem (orderId, menuId, description, price) VALUES (?, ?, ?, ?)`, [orderId, menuId, item.description, item.price]);
+        const menuItem = await this.query(connection, `SELECT title, price FROM menu WHERE id=?`, [menuId]);
+        const { title, price } = menuItem[0];
+        await this.query(connection, `INSERT INTO orderItem (orderId, menuId, description, price) VALUES (?, ?, ?, ?)`, [orderId, menuId, title, price * item.quantity]);
       }
       return { ...order, id: orderId };
     } finally {

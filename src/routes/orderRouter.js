@@ -130,6 +130,7 @@ orderRouter.post(
         })
       }
     } catch (error) {
+      console.log(error);
       throw new StatusCodeError('bad request', 400);
     }
   })

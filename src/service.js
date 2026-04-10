@@ -1,3 +1,5 @@
+import cors from 'cors';
+
 const express = require('express');
 const { authRouter, setAuthUser } = require('./routes/authRouter.js');
 const orderRouter = require('./routes/orderRouter.js');
@@ -17,12 +19,21 @@ app.use((req, res, next) => {
   next();
 });
 
+const corsOptions = {
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
 const apiRouter = express.Router();
 app.use('/api', apiRouter);
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/user', userRouter);
 apiRouter.use('/order', orderRouter);
 apiRouter.use('/franchise', franchiseRouter);
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 apiRouter.use('/docs', (req, res) => {
   res.json({

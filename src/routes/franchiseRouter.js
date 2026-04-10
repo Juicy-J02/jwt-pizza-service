@@ -116,6 +116,7 @@ franchiseRouter.delete(
   metrics.activeUserTracker,
   metrics.chaosTracker,
   logger.httpLogger,
+  authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const franchiseId = Number(req.params.franchiseId);
     await DB.deleteFranchise(franchiseId);

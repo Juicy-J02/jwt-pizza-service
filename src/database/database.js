@@ -212,6 +212,9 @@ class DB {
   async addDinerOrder(user, order) {
     const connection = await this.getConnection();
     try {
+      if (!user || !order.items || !order.storeId || !order.franchiseId) {
+        throw new StatusCodeError('bad request', 400);
+      }
       const orderResult = await this.query(connection, `INSERT INTO dinerOrder (dinerId, franchiseId, storeId, date) VALUES (?, ?, ?, now())`, [user.id, order.franchiseId, order.storeId]);
       const orderId = orderResult.insertId;
       for (const item of order.items) {
